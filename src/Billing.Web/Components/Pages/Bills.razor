@@ -2,23 +2,24 @@
 @page "/bills"
 @inject BillingApiClient Api
 
-<h1>Bills</h1>
-
-<p><a href="/bills/new">New bill</a></p>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Bills</h1>
+    <a class="btn btn-primary" href="/bills/new">New bill</a>
+</div>
 
 @if (_bills is null)
 {
-    <p>Loading…</p>
+    <p class="text-muted">Loading…</p>
 }
 else if (_bills.Count == 0)
 {
-    <p>No bills yet.</p>
+    <p class="text-muted">No bills yet.</p>
 }
 else
 {
-    <table class="table">
-        <thead>
-            <tr><th>Bill</th><th>Patient ref</th><th>Date of service</th><th>Status</th><th>Total allowed</th></tr>
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr><th>Bill</th><th>Patient ref</th><th>Date of service</th><th>Status</th><th class="text-end">Total allowed</th></tr>
         </thead>
         <tbody>
         @foreach (var bill in _bills)
@@ -27,8 +28,8 @@ else
                 <td><a href="/bills/@bill.Id">#@bill.Id</a></td>
                 <td>@bill.PatientRef</td>
                 <td>@bill.DateOfService.ToString("yyyy-MM-dd")</td>
-                <td><span class="badge @(bill.Status == "Processed" ? "bg-success" : "bg-secondary")">@bill.Status</span></td>
-                <td>@(bill.TotalAllowed?.ToString("F2", CultureInfo.InvariantCulture))</td>
+                <td><span class="badge @(bill.Status == "Processed" ? "text-bg-success" : "text-bg-secondary")">@bill.Status</span></td>
+                <td class="text-end font-monospace">@(bill.TotalAllowed?.ToString("F2", CultureInfo.InvariantCulture))</td>
             </tr>
         }
         </tbody>
