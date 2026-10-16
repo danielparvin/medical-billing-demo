@@ -1,0 +1,197 @@
+@page "/bills/new"
+@page "/bills/{Id:int}"
+@using System.Globalization
+@inject BillingApiClient Api
+@inject NavigationManager Navigation
+
+<h1>@(Id is null ? "New bill" : $"Bill #{Id}")</h1>
+
+<p><a href="/bills">Back to bills</a></p>
+
+@if (_loading)
+{
+    <p>Loading…</p>
+}
+else
+{
+    @if (_error is not null)
+    {
+        <div class="alert alert-danger" role="alert" data-testid="error">@_error</div>
+    }
+
+    <div class="mb-3">
+        <label>Patient ref <input id="patientRef" @bind="_model.PatientRef" /></label>
+        <label>Date of service <input id="dateOfService" type="date" @bind="_model.DateOfService" /></label>
+        @if (_result is not null)
+        {
+            <span class="badge bg-success" data-testid="status">@_result.Status</span>
+            <strong data-testid="total">Total allowed: @Format(_result.TotalAllowed)</strong>
+        }
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>#</th><th>Code</th><th>-50</th><th>-26</th><th>Units</th><th>Billed</th>
+                <th>Allowed</th><th>Pricing</th><th></th>
+            </tr>
+        </thead>
+        <tbody>
+        @for (var i = 0; i < _model.Lines.Count; i++)
+        {
+            var line = _model.Lines[i];
+            var index = i;
+            var outcome = _result?.Lines.FirstOrDefault(r => r.LineNumber == line.LineNumber);
+            <tr data-testid="line-row">
+                <td>@line.LineNumber</td>
+                <td><input class="code" @bind="line.ProcedureCode" /></td>
+                <td><input class="mod50" type="checkbox" @bind="line.Modifier50" /></td>
+                <td><input class="mod26" type="checkbox" @bind="line.Modifier26" /></td>
+                <td><input class="units" type="number" @bind="line.Units" /></td>
+                <td><input class="billed" type="number" step="0.01" @bind="line.BilledAmount" /></td>
+                <td data-testid="allowed">@Format(outcome?.AllowedAmount)</td>
+                <td>
+                    @outcome?.PricingStatus
+                    @if (outcome?.UnpricedReason is not null)
+                    {
+                        <em>(@outcome.UnpricedReason)</em>
+                    }
+                    @if (outcome is { Adjustments.Count: > 0 })
+                    {
+                        <details>
+                            <summary>Audit trail</summary>
+                            <ol>
+                            @foreach (var step in outcome.Adjustments)
+                            {
+                                <li>@step.Step @(step.Factor is null ? "" : $"× {step.Factor.Value.ToString("0.######", CultureInfo.InvariantCulture)}") = @step.ResultingAmount.ToString("0.######", CultureInfo.InvariantCulture)</li>
+                            }
+                            </ol>
+                        </details>
+                    }
+                </td>
+                <td><button class="remove-line" type="button" @onclick="() => RemoveLine(index)">Remove</button></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+
+    <button id="add-line" type="button" @onclick="AddLine">Add line</button>
+    <button id="save" type="button" disabled="@_busy" @onclick="SaveAsync">Save</button>
+    <button id="process" type="button" disabled="@_busy" @onclick="ProcessAsync">Process Bill</button>
+}
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private BillEditModel _model = BillEditModel.Empty();
+    private BillDto? _result;
+    private string? _error;
+    private bool _loading;
+    private bool _busy;
+    private int? _loadedId;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id is null)
+        {
+            _model = BillEditModel.Empty();
+            _result = null;
+            _loadedId = null;
+            return;
+        }
+
+        if (_loadedId == Id)
+        {
+            return;
+        }
+
+        _loading = true;
+        var bill = await Api.GetAsync(Id.Value);
+        _loading = false;
+
+        if (bill is null)
+        {
+            _error = $"Bill {Id} was not found.";
+            return;
+        }
+
+        Apply(bill);
+        _loadedId = Id;
+    }
+
+    private void Apply(BillDto bill)
+    {
+        _model = BillEditModel.FromDto(bill);
+        _result = bill.Status == "Processed" ? bill : null;
+    }
+
+    private void AddLine() => _model.AddLine();
+
+    private void RemoveLine(int index) => _model.RemoveLineAt(index);
+
+    private async Task<BillDto?> SaveCoreAsync()
+    {
+        var request = _model.ToRequest();
+        var outcome = Id is null
+            ? await Api.CreateAsync(request)
+            : await Api.UpdateAsync(Id.Value, request);
+
+        if (outcome.Error is not null)
+        {
+            _error = outcome.Error;
+            return null;
+        }
+
+        return outcome.Value;
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        _busy = true;
+        try
+        {
+            var saved = await SaveCoreAsync();
+            if (saved is null) return;
+
+            Apply(saved);
+            _loadedId = saved.Id;
+            if (Id is null) Navigation.NavigateTo($"/bills/{saved.Id}");
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    /// <summary>Process Bill saves the current edits first, then reprices the saved bill.</summary>
+    private async Task ProcessAsync()
+    {
+        _error = null;
+        _busy = true;
+        try
+        {
+            var saved = await SaveCoreAsync();
+            if (saved is null) return;
+
+            _loadedId = saved.Id;
+            var processed = await Api.ProcessAsync(saved.Id);
+            if (processed.Error is not null)
+            {
+                _error = processed.Error;
+                Apply(saved);
+                return;
+            }
+
+            Apply(processed.Value!);
+            if (Id is null) Navigation.NavigateTo($"/bills/{saved.Id}");
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private static string Format(decimal? value) =>
+        value?.ToString("F2", CultureInfo.InvariantCulture) ?? "";
+}

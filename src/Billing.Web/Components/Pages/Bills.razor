@@ -1,0 +1,43 @@
+@page "/"
+@page "/bills"
+@inject BillingApiClient Api
+
+<h1>Bills</h1>
+
+<p><a href="/bills/new">New bill</a></p>
+
+@if (_bills is null)
+{
+    <p>Loading…</p>
+}
+else if (_bills.Count == 0)
+{
+    <p>No bills yet.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr><th>Bill</th><th>Patient ref</th><th>Date of service</th><th>Status</th><th>Total allowed</th></tr>
+        </thead>
+        <tbody>
+        @foreach (var bill in _bills)
+        {
+            <tr>
+                <td><a href="/bills/@bill.Id">#@bill.Id</a></td>
+                <td>@bill.PatientRef</td>
+                <td>@bill.DateOfService.ToString("yyyy-MM-dd")</td>
+                <td><span class="badge @(bill.Status == "Processed" ? "bg-success" : "bg-secondary")">@bill.Status</span></td>
+                <td>@(bill.TotalAllowed?.ToString("F2", CultureInfo.InvariantCulture))</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<BillSummaryDto>? _bills;
+
+    protected override async Task OnInitializedAsync() =>
+        _bills = (await Api.ListAsync()).ToList();
+}
