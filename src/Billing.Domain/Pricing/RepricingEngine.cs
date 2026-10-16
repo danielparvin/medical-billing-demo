@@ -21,6 +21,8 @@ public static class RepricingEngine
             .Select(l => PriceBeforeDiscount(l, baseFees))
             .ToList();
 
+        ApplyMultipleProcedureDiscount(working);
+
         var results = working.Select(Finish).ToList();
         return new RepricingResult(results, results.Sum(r => r.AllowedAmount));
     }
@@ -61,6 +63,28 @@ public static class RepricingEngine
 
         working.Amount = amount;
         return working;
+    }
+
+    public const decimal SecondaryProcedureFactor = 0.50m;
+
+    /// <summary>
+    /// Ranks priced lines by amount (highest first, ties by lowest line number).
+    /// Rank 1 pays in full; every other rank pays <see cref="SecondaryProcedureFactor"/>.
+    /// </summary>
+    private static void ApplyMultipleProcedureDiscount(List<WorkingLine> working)
+    {
+        var ranked = working
+            .Where(w => w.Amount is not null)
+            .OrderByDescending(w => w.Amount)
+            .ThenBy(w => w.Line.LineNumber)
+            .ToList();
+
+        foreach (var line in ranked.Skip(1))
+        {
+            line.Amount *= SecondaryProcedureFactor;
+            line.Steps.Add(new AdjustmentStep(
+                StepNames.MultipleProcedureDiscount, SecondaryProcedureFactor, line.Amount!.Value));
+        }
     }
 
     private static LineResult Finish(WorkingLine working)

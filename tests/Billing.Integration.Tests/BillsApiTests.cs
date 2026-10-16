@@ -59,6 +59,23 @@ public sealed class BillsApiTests(SqlServerFixture database) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ProcessingAMultiLineBill_AppliesTheMultipleProcedureDiscount()
+    {
+        await database.AddFeeAsync("A1001", 100.00m, EffectiveFrom);
+        await database.AddFeeAsync("B2001", 200.00m, EffectiveFrom);
+        var created = await CreateAsync(TestBills.Request(
+            TestBills.Line(1, "A1001", billed: 1000m),
+            TestBills.Line(2, "B2001", billed: 1000m)));
+
+        var processed = await ProcessAsync(created.Id);
+
+        Assert.Equal(50.00m, processed.Lines[0].AllowedAmount);
+        Assert.Equal(200.00m, processed.Lines[1].AllowedAmount);
+        Assert.Equal(250.00m, processed.TotalAllowed);
+        Assert.Contains(processed.Lines[0].Adjustments, a => a.Step == "MultipleProcedureDiscount");
+    }
+
+    [Fact]
     public async Task ProcessedAtUtc_EqualsTheInjectedClock()
     {
         await database.AddFeeAsync("A1001", 100.00m, EffectiveFrom);
