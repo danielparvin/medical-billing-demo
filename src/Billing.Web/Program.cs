@@ -1,6 +1,9 @@
 using Billing.Web.Components;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddServiceDefaults();
+
+// "https+http://api" is resolved by Aspire service discovery to the AppHost's "api" resource.
 builder.Services.AddHttpClient<Billing.Web.Services.BillingApiClient>(client =>
     client.BaseAddress = new Uri(
         builder.Configuration["Api:BaseUrl"]
@@ -27,5 +30,7 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapDefaultEndpoints();
 
 app.Run();

@@ -1,9 +1,11 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Billing.Api/Billing.Api.csproj" />
+    <Project Path="src/Billing.AppHost/Billing.AppHost.csproj" />
     <Project Path="src/Billing.Contracts/Billing.Contracts.csproj" />
     <Project Path="src/Billing.Data/Billing.Data.csproj" />
     <Project Path="src/Billing.Domain/Billing.Domain.csproj" />
+    <Project Path="src/Billing.ServiceDefaults/Billing.ServiceDefaults.csproj" />
     <Project Path="src/Billing.Web/Billing.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">

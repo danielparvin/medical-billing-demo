@@ -3,5 +3,6 @@
     <ProjectReference Include="..\Billing.Domain\Billing.Domain.csproj" />
     <ProjectReference Include="..\Billing.Data\Billing.Data.csproj" />
     <ProjectReference Include="..\Billing.Contracts\Billing.Contracts.csproj" />
+    <ProjectReference Include="..\Billing.ServiceDefaults\Billing.ServiceDefaults.csproj" />
   </ItemGroup>
 </Project>

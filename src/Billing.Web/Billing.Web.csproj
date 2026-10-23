@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Billing.Contracts\Billing.Contracts.csproj" />
+    <ProjectReference Include="..\Billing.ServiceDefaults\Billing.ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>

@@ -3,6 +3,7 @@ using Billing.Data;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddServiceDefaults();
 
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
@@ -22,6 +23,7 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 app.MapControllers();
+app.MapDefaultEndpoints();
 
 if (app.Configuration.GetValue<bool>("Database:MigrateAndSeedOnStartup"))
 {

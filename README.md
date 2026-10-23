@@ -7,6 +7,8 @@ end-to-end testing in .NET, including Testcontainers. **All data is invented; th
 - .NET SDK from `global.json` (.NET 10)
 - Docker (SQL Server image is **x64-only**)
 - `dotnet tool restore` (restores the repo-local `dotnet-ef`; only needed to add migrations)
+- A trusted HTTPS development certificate for the Aspire dashboard: `dotnet dev-certs https --trust` once per
+  machine (Windows asks you to confirm). Do this before the talk, not on stage.
 
 Open `Billing.slnx` in Visual Studio 2022 17.13+ or Visual Studio 2026.
 
@@ -17,13 +19,25 @@ dotnet test --filter "Category=Integration"   # starts one SQL Server container 
 dotnet test                                   # everything
 ```
 
-## Run the app
-1. `copy .env.example .env` and set `MSSQL_SA_PASSWORD` (never commit `.env`).
-2. `./scripts/run-demo.ps1` then open http://localhost:5102
+## Run the app (Aspire)
+`Billing.AppHost` orchestrates everything: a SQL Server container (`sql`, database `Billing`), the API (`api`),
+and the Blazor UI (`web`). No `.env` or password setup: Aspire generates the SQL Server password and stores it
+in the AppHost's user secrets.
+
+- **Visual Studio:** set `Billing.AppHost` as the startup project and press F5.
+- **Command line:** `./scripts/run-demo.ps1` (or `dotnet run --project src/Billing.AppHost`).
+
+The Aspire dashboard opens with every resource, its logs, traces and metrics; the UI is at http://localhost:5102.
+The SQL Server container is **persistent** with a data volume, so after the first start it is reused across runs
+(stop it from Docker Desktop to reclaim it). The web app finds the API through service discovery (`https+http://api`).
 
 ## Layout
-`Domain` (pure engine) · `Data` (EF Core) · `Contracts` (DTOs) · `Api` (Controllers) · `Web` (Blazor).
+`Domain` (pure engine) · `Data` (EF Core) · `Contracts` (DTOs) · `Api` (Controllers) · `Web` (Blazor) ·
+`AppHost` (Aspire orchestration) · `ServiceDefaults` (OpenTelemetry, health checks, service discovery, resilience).
 Tests: `Domain.Tests` (unit) · `Web.Tests` (bUnit) · `Integration.Tests` (Testcontainers + `WebApplicationFactory`).
+
+Aspire runs the app; it does not change the tests. The integration tests still start their own throwaway SQL Server
+with Testcontainers, so they stay independent of the AppHost and of any data in the persistent dev container.
 
 ## Checkpoints
 | Tag | State |
@@ -41,7 +55,8 @@ Tests: `Domain.Tests` (unit) · `Web.Tests` (bUnit) · `Integration.Tests` (Test
 4. Run the integration tests; show `docker ps` in a second terminal while the container starts.
 5. Show the effective-date boundary tests: why a mock could not verify them.
 6. Run the API tests (`WebApplicationFactory` + `FakeTimeProvider`).
-7. Open the UI, edit a bill, click **Process Bill**, and watch the discounted totals appear.
+7. Start the AppHost, open the UI from the Aspire dashboard, edit a bill, click **Process Bill**, and watch the
+   discounted totals appear; then open the dashboard's Traces page: one trace spans the button click in `web` and the request in `api`.
 
 ## Live-coding script (multiple-procedure discount)
 Rule: rank priced lines by amount after units and modifiers (highest first, ties by lowest line number);
