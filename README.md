@@ -21,8 +21,20 @@ dotnet test                                   # everything
 
 ## Run the app (Aspire)
 `Billing.AppHost` orchestrates everything: a SQL Server container (`sql`, database `Billing`), the API (`api`),
-and the Blazor UI (`web`). No `.env` or password setup: Aspire generates the SQL Server password and stores it
-in the AppHost's user secrets.
+and the Blazor UI (`web`).
+
+The SQL Server `sa` password is the AppHost parameter `sql-password`, kept in the AppHost's user secrets (never in
+the repo). On a new machine, set it once before the first run (8+ characters with upper, lower, digit and symbol);
+if it is missing, the Aspire dashboard asks for it instead:
+
+```powershell
+dotnet user-secrets set "Parameters:sql-password" "<strong password>" --project src/Billing.AppHost
+```
+
+> **Changing the password later:** SQL Server stores the `sa` password in the data volume the first time it starts
+> and ignores later changes. After changing `Parameters:sql-password`, delete the SQL container and its volume
+> (`billing.apphost-…-sql-data`) in Docker Desktop, or the `sql` resource stays **Unhealthy** with
+> "Login failed for user 'sa'" in its logs. Deleting the volume also deletes the dev database's bills.
 
 - **Visual Studio:** set `Billing.AppHost` as the startup project and press F5.
 - **Command line:** `./scripts/run-demo.ps1` (or `dotnet run --project src/Billing.AppHost`).
