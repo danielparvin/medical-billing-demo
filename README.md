@@ -88,6 +88,10 @@ Write the tests in `tests/Billing.Domain.Tests/MultipleProcedureDiscountTests.cs
 - **Fallback if Docker misbehaves:** show a saved terminal capture of a green integration run; unit and
   component tests need no Docker.
 - Rehearse the live-coding segment from `demo-start` twice. `git checkout demo-finished` resets.
+- Right before the talk: `./scripts/prepare-live-demo.ps1 -DisableAutoMemory` makes a clean clone of `demo-start`
+  (no other branches, tags or remote, so Claude cannot reach the finished solution) and checks that Claude has no
+  saved memories, CLAUDE.md or earlier sessions for it. Open a **new** Claude session in that clone. Run it again
+  to re-check; `-ResetClaudeData` moves leftover memories and sessions aside.
 
 ## Known exceptions
 - `Billing.Web.Tests` suppresses NuGet advisory GHSA-pgww-w46g-26qg for AngleSharp 1.2.0. bUnit 1.40 (the last 1.x)
