@@ -67,8 +67,9 @@ with Testcontainers, so they stay independent of the AppHost and of any data in 
 4. Run the integration tests; show `docker ps` in a second terminal while the container starts.
 5. Show the effective-date boundary tests: why a mock could not verify them.
 6. Run the API tests (`WebApplicationFactory` + `FakeTimeProvider`).
-7. Start the AppHost, open the UI from the Aspire dashboard, edit a bill, click **Process Bill**, and watch the
-   discounted totals appear; then open the dashboard's Traces page: one trace spans the button click in `web` and the request in `api`.
+7. Start the AppHost, open the UI from the Aspire dashboard, click **New bill** and enter some lines (a new database
+   has no bills), click **Process Bill**, and watch the discounted totals appear; then open the dashboard's Traces page:
+   one trace spans the button click in `web` and the request in `api`.
 
 ## Live-coding script (multiple-procedure discount)
 Start on `main` with the finished discount removed, leaving these edits uncommitted:
