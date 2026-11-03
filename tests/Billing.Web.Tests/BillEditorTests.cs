@@ -107,10 +107,98 @@ public sealed class BillEditorTests : TestContext
             new BillingApiClient(new HttpClient(new ThrowingHandler()) { BaseAddress = new Uri("http://api.test/") }));
 
         var cut = RenderComponent<BillEditor>();
+        cut.Find(".code").Change("A1001");
         cut.Find("#save").Click();
 
         cut.WaitForAssertion(() =>
             Assert.Contains("unreachable", cut.Find("[data-testid=error]").TextContent, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void CodeField_StopsTypingAfterFiveCharacters()
+    {
+        var cut = RenderComponent<BillEditor>();
+
+        Assert.Equal("5", cut.Find(".code").GetAttribute("maxlength"));
+    }
+
+    [Theory]
+    [InlineData("#save", "B12345")]
+    [InlineData("#save", "A100")]
+    [InlineData("#save", "")]
+    [InlineData("#save", "A-100")]
+    [InlineData("#save", "A 100")]
+    [InlineData("#save", "Ä1001")]
+    [InlineData("#process", "B12345")]
+    [InlineData("#process", "A-100")]
+    public void InvalidCode_BlocksTheApiCallAndShowsAnError(string button, string code)
+    {
+        var cut = RenderComponent<BillEditor>();
+        cut.Find(".code").Change(code);
+
+        cut.Find(button).Click();
+
+        Assert.Empty(_api.Calls);
+        Assert.Contains("is-invalid", cut.Find(".code").ClassList);
+        Assert.Contains("5 letters or digits", cut.Find("[data-testid=code-error]").TextContent);
+        Assert.Contains("5 letters or digits", cut.Find("[data-testid=error]").TextContent);
+    }
+
+    [Theory]
+    [InlineData("A1001")]
+    [InlineData("b1234")]
+    [InlineData("12345")]
+    [InlineData("ABCDE")]
+    public void ValidCode_IsSentToTheApi(string code)
+    {
+        _api.On(HttpMethod.Post, "/api/bills", () =>
+            FakeApiHandler.Json(HttpStatusCode.Created, Bill("Draft", null, Line(1))));
+        var cut = RenderComponent<BillEditor>();
+        cut.Find(".code").Change(code);
+
+        cut.Find("#save").Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(["POST /api/bills"], _api.Calls));
+        Assert.Empty(cut.FindAll("[data-testid=code-error]"));
+    }
+
+    [Fact]
+    public void BadCode_IsFlaggedOnLeavingTheField_ButAnUntouchedEmptyOneIsNot()
+    {
+        var cut = RenderComponent<BillEditor>();
+        Assert.DoesNotContain("is-invalid", cut.Find(".code").ClassList);
+
+        cut.Find(".code").Change("A100");
+
+        Assert.Contains("is-invalid", cut.Find(".code").ClassList);
+    }
+
+    [Fact]
+    public void CorrectingACode_ClearsItsError()
+    {
+        var cut = RenderComponent<BillEditor>();
+        cut.Find(".code").Change("A100");
+        cut.Find("#save").Click();
+
+        cut.Find(".code").Change("A1001");
+
+        Assert.DoesNotContain("is-invalid", cut.Find(".code").ClassList);
+        Assert.Empty(cut.FindAll("[data-testid=code-error]"));
+    }
+
+    [Fact]
+    public void OnlyTheLineWithABadCodeIsFlagged()
+    {
+        _api.On(HttpMethod.Get, "/api/bills/1", () =>
+            FakeApiHandler.Json(HttpStatusCode.OK, Bill("Draft", null, Line(1), Line(2))));
+        var cut = RenderExisting();
+        cut.FindAll(".code")[1].Change("A100");
+
+        cut.Find("#save").Click();
+
+        Assert.Equal(["GET /api/bills/1"], _api.Calls);
+        Assert.DoesNotContain("is-invalid", cut.FindAll(".code")[0].ClassList);
+        Assert.Contains("is-invalid", cut.FindAll(".code")[1].ClassList);
     }
 
     private sealed class ThrowingHandler : HttpMessageHandler
