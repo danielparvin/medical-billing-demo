@@ -57,7 +57,13 @@ else
             var outcome = _result?.Lines.FirstOrDefault(r => r.LineNumber == line.LineNumber);
             <tr data-testid="line-row">
                 <td class="text-muted">@line.LineNumber</td>
-                <td><input class="code form-control form-control-sm" style="max-width: 7rem" @bind="line.ProcedureCode" /></td>
+                <td>
+                    <input class="code form-control form-control-sm @(ShowCodeError(line) ? "is-invalid" : "")" style="max-width: 7rem" maxlength="@LineEditModel.ProcedureCodeLength" @bind="line.ProcedureCode" />
+                    @if (ShowCodeError(line))
+                    {
+                        <div class="invalid-feedback" data-testid="code-error">Enter exactly 5 letters or digits.</div>
+                    }
+                </td>
                 <td class="text-center"><input class="mod50 form-check-input" type="checkbox" @bind="line.Modifier50" /></td>
                 <td class="text-center"><input class="mod26 form-check-input" type="checkbox" @bind="line.Modifier26" /></td>
                 <td><input class="units form-control form-control-sm" style="max-width: 5rem" type="number" @bind="line.Units" /></td>
@@ -107,6 +113,7 @@ else
     private bool _loading;
     private bool _busy;
     private int? _loadedId;
+    private bool _showCodeErrors;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -115,6 +122,7 @@ else
             _model = BillEditModel.Empty();
             _result = null;
             _loadedId = null;
+            _showCodeErrors = false;
             return;
         }
 
@@ -141,14 +149,26 @@ else
     {
         _model = BillEditModel.FromDto(bill);
         _result = bill.Status == "Processed" ? bill : null;
+        _showCodeErrors = false;
     }
 
     private void AddLine() => _model.AddLine();
 
     private void RemoveLine(int index) => _model.RemoveLineAt(index);
 
+    /// <summary>A typed code is checked on leaving the field; an untouched empty one only once saving is tried.</summary>
+    private bool ShowCodeError(LineEditModel line) =>
+        !line.HasValidProcedureCode && (_showCodeErrors || line.ProcedureCode.Length > 0);
+
     private async Task<BillDto?> SaveCoreAsync()
     {
+        if (!_model.Lines.All(l => l.HasValidProcedureCode))
+        {
+            _showCodeErrors = true;
+            _error = "Fix the highlighted codes: each must be exactly 5 letters or digits.";
+            return null;
+        }
+
         var request = _model.ToRequest();
         var outcome = Id is null
             ? await Api.CreateAsync(request)

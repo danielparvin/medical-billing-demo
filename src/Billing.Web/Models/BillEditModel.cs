@@ -49,12 +49,18 @@ public sealed class BillEditModel
 
 public sealed class LineEditModel
 {
+    public const int ProcedureCodeLength = 5;
+
     public int LineNumber { get; set; }
     public string ProcedureCode { get; set; } = "";
     public bool Modifier50 { get; set; }
     public bool Modifier26 { get; set; }
     public int Units { get; set; } = 1;
     public decimal BilledAmount { get; set; }
+
+    /// <summary>Matches [A-Za-z0-9]{5}.</summary>
+    public bool HasValidProcedureCode =>
+        ProcedureCode.Length == ProcedureCodeLength && ProcedureCode.All(char.IsAsciiLetterOrDigit);
 
     public LineItemRequest ToRequest()
     {
