@@ -14,9 +14,12 @@ var sql = builder.AddSqlServer("sql", sqlPassword)
 // Injected into the API as ConnectionStrings__Billing, the key Billing.Api already reads.
 var billingDb = sql.AddDatabase("Billing");
 
+// The health check makes WaitFor(api) below hold the UI back until the API has migrated, seeded and started,
+// so nobody can reach the UI while its calls to the API would still time out.
 var api = builder.AddProject<Projects.Billing_Api>("api")
     .WithReference(billingDb)
-    .WaitFor(billingDb);
+    .WaitFor(billingDb)
+    .WithHttpHealthCheck("/health");
 
 builder.AddProject<Projects.Billing_Web>("web")
     .WithReference(api)
