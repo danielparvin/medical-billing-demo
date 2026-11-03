@@ -7,7 +7,7 @@ namespace Billing.Integration.Tests;
 [Trait("Category", "Integration")]
 public sealed class SeederTests(SqlServerFixture database) : IAsyncLifetime
 {
-    private const int SeededEntryCount = 21;
+    private const int SeededEntryCount = 20;
 
     public Task InitializeAsync() => database.ResetAsync();
     public Task DisposeAsync() => Task.CompletedTask;
