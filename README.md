@@ -57,13 +57,13 @@ with Testcontainers, so they stay independent of the AppHost and of any data in 
 | `cp-1-scaffold` | Empty solution building green |
 | `cp-2-engine-no-mpd` | Engine without the multiple-procedure discount, with unit tests |
 | `cp-3-data-api` | Data layer, API, container-backed tests |
-| `cp-4-ui` / branch `demo-start` | Full app, **discount not yet implemented** |
-| `cp-5-mpd-complete` / branch `demo-finished` | Discount tests + implementation |
+| `cp-4-ui` | Full app, **discount not yet implemented** |
+| `cp-5-mpd-complete` | Discount tests + implementation |
 
 ## Talk arc
 1. Tour the solution and the test pyramid.
 2. Run the unit tests (instant).
-3. **Live-code the discount** from `demo-start` (script below).
+3. **Live-code the discount** on `main` with the finished code removed (script below).
 4. Run the integration tests; show `docker ps` in a second terminal while the container starts.
 5. Show the effective-date boundary tests: why a mock could not verify them.
 6. Run the API tests (`WebApplicationFactory` + `FakeTimeProvider`).
@@ -71,6 +71,12 @@ with Testcontainers, so they stay independent of the AppHost and of any data in 
    discounted totals appear; then open the dashboard's Traces page: one trace spans the button click in `web` and the request in `api`.
 
 ## Live-coding script (multiple-procedure discount)
+Start on `main` with the finished discount removed, leaving these edits uncommitted:
+- In `src/Billing.Domain/Pricing/RepricingEngine.cs`, remove the `ApplyMultipleProcedureDiscount` call and method and
+  the `SecondaryProcedureFactor` constant.
+- Delete `tests/Billing.Domain.Tests/MultipleProcedureDiscountTests.cs`.
+- In `tests/Billing.Integration.Tests/BillsApiTests.cs`, remove `ProcessingAMultiLineBill_AppliesTheMultipleProcedureDiscount`.
+
 Rule: rank priced lines by amount after units and modifiers (highest first, ties by lowest line number);
 rank 1 pays 100%, every other rank pays 50%. Round once per line half-up; cap at billed charges.
 Write the tests in `tests/Billing.Domain.Tests/MultipleProcedureDiscountTests.cs`, one at a time, red then green:
@@ -87,11 +93,8 @@ Write the tests in `tests/Billing.Domain.Tests/MultipleProcedureDiscountTests.cs
 - The day before: `./scripts/pull-images.ps1`, then run the integration tests once while online.
 - **Fallback if Docker misbehaves:** show a saved terminal capture of a green integration run; unit and
   component tests need no Docker.
-- Rehearse the live-coding segment from `demo-start` twice. `git checkout demo-finished` resets.
-- Right before the talk: `./scripts/prepare-live-demo.ps1 -DisableAutoMemory` makes a clean clone of `demo-start`
-  (no other branches, tags or remote, so Claude cannot reach the finished solution) and checks that Claude has no
-  saved memories, CLAUDE.md or earlier sessions for it. Open a **new** Claude session in that clone. Run it again
-  to re-check; `-ResetClaudeData` moves leftover memories and sessions aside.
+- Rehearse the live-coding segment twice. `git restore .` discards all uncommitted changes and puts the finished
+  discount back, so remove it again before the next run.
 
 ## Known exceptions
 - `Billing.Web.Tests` suppresses NuGet advisory GHSA-pgww-w46g-26qg for AngleSharp 1.2.0. bUnit 1.40 (the last 1.x)
