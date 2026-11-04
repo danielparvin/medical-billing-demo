@@ -1,0 +1,8 @@
+{
+  "stryker-config": {
+    "project": "Billing.Domain.csproj",
+    "mutate": ["**/Pricing/RepricingEngine.cs"],
+    "reporters": ["progress", "html"],
+    "thresholds": { "high": 90, "low": 70, "break": 0 }
+  }
+}
