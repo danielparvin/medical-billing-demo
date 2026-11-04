@@ -42,7 +42,7 @@ public sealed class BillsApiTests(SqlServerFixture database) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task CreateThenProcessThenGet_ReturnsAllowedAmountsAndTotal()
+    public async Task Process_returns_and_persists_the_allowed_amounts_and_total_when_the_bill_has_a_priced_line()
     {
         await database.AddFeeAsync("A1001", 100.00m, EffectiveFrom);
         var created = await CreateAsync(TestBills.Request(TestBills.Line(1, "A1001", billed: 500m, units: 2)));
@@ -59,24 +59,7 @@ public sealed class BillsApiTests(SqlServerFixture database) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ProcessingAMultiLineBill_AppliesTheMultipleProcedureDiscount()
-    {
-        await database.AddFeeAsync("A1001", 100.00m, EffectiveFrom);
-        await database.AddFeeAsync("B2001", 200.00m, EffectiveFrom);
-        var created = await CreateAsync(TestBills.Request(
-            TestBills.Line(1, "A1001", billed: 1000m),
-            TestBills.Line(2, "B2001", billed: 1000m)));
-
-        var processed = await ProcessAsync(created.Id);
-
-        Assert.Equal(50.00m, processed.Lines[0].AllowedAmount);
-        Assert.Equal(200.00m, processed.Lines[1].AllowedAmount);
-        Assert.Equal(250.00m, processed.TotalAllowed);
-        Assert.Contains(processed.Lines[0].Adjustments, a => a.Step == "MultipleProcedureDiscount");
-    }
-
-    [Fact]
-    public async Task ProcessedAtUtc_EqualsTheInjectedClock()
+    public async Task Process_sets_ProcessedAtUtc_to_the_injected_clock_time()
     {
         await database.AddFeeAsync("A1001", 100.00m, EffectiveFrom);
         var created = await CreateAsync(TestBills.Request(TestBills.Line(1, "A1001", 500m)));
@@ -87,7 +70,7 @@ public sealed class BillsApiTests(SqlServerFixture database) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task EditingAProcessedBill_ReturnsItToDraftAndClearsResults()
+    public async Task Update_returns_the_bill_to_draft_and_clears_the_results_when_the_bill_was_processed()
     {
         await database.AddFeeAsync("A1001", 100.00m, EffectiveFrom);
         var created = await CreateAsync(TestBills.Request(TestBills.Line(1, "A1001", 500m)));
@@ -107,7 +90,7 @@ public sealed class BillsApiTests(SqlServerFixture database) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Reprocessing_ProducesIdenticalResults()
+    public async Task Process_produces_identical_results_when_the_bill_is_processed_twice()
     {
         await database.AddFeeAsync("A1001", 100.00m, EffectiveFrom);
         var created = await CreateAsync(TestBills.Request(TestBills.Line(1, "A1001", 500m, 1, "50")));
@@ -121,7 +104,7 @@ public sealed class BillsApiTests(SqlServerFixture database) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task LineWithoutAFeeScheduleEntry_IsFlaggedButTheBillStillProcesses()
+    public async Task Process_flags_the_line_as_unpriced_and_still_processes_the_bill_when_a_line_has_no_fee_schedule_entry()
     {
         var created = await CreateAsync(TestBills.Request(TestBills.Line(1, "Z9999", 100m)));
 
@@ -135,7 +118,7 @@ public sealed class BillsApiTests(SqlServerFixture database) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task LowercaseProcedureCode_IsMatchedToTheFeeSchedule()
+    public async Task Process_matches_the_fee_schedule_entry_when_the_procedure_code_is_lowercase()
     {
         await database.AddFeeAsync("A1001", 100.00m, EffectiveFrom);
         var created = await CreateAsync(TestBills.Request(TestBills.Line(1, "a1001", 500m)));
@@ -147,7 +130,7 @@ public sealed class BillsApiTests(SqlServerFixture database) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task BillWithNoLines_Returns400ProblemDetails()
+    public async Task Create_returns_400_problem_details_when_the_bill_has_no_lines()
     {
         var response = await _client.PostAsJsonAsync("/api/bills", TestBills.Request());
 
@@ -156,7 +139,7 @@ public sealed class BillsApiTests(SqlServerFixture database) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UnknownModifier_Returns400()
+    public async Task Create_returns_400_when_a_line_has_an_unknown_modifier()
     {
         var response = await _client.PostAsJsonAsync("/api/bills",
             TestBills.Request(TestBills.Line(1, "A1001", 100m, 1, "99")));
@@ -165,7 +148,7 @@ public sealed class BillsApiTests(SqlServerFixture database) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DuplicateModifierOnALine_Returns400()
+    public async Task Create_returns_400_when_a_line_repeats_a_modifier()
     {
         var response = await _client.PostAsJsonAsync("/api/bills",
             TestBills.Request(TestBills.Line(1, "A1001", 100m, 1, "50", "50")));
@@ -174,7 +157,7 @@ public sealed class BillsApiTests(SqlServerFixture database) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task DuplicateLineNumbers_Return400()
+    public async Task Create_returns_400_when_line_numbers_are_duplicated()
     {
         var response = await _client.PostAsJsonAsync("/api/bills",
             TestBills.Request(TestBills.Line(1, "A1001", 100m), TestBills.Line(1, "B2001", 100m)));
@@ -183,7 +166,7 @@ public sealed class BillsApiTests(SqlServerFixture database) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task AbsurdUnits_Return400_InsteadOfOverflowingTheDatabase()
+    public async Task Create_returns_400_instead_of_overflowing_the_database_when_the_units_are_too_large()
     {
         var response = await _client.PostAsJsonAsync("/api/bills",
             TestBills.Request(TestBills.Line(1, "A1001", 100m, units: 1000)));
@@ -192,27 +175,47 @@ public sealed class BillsApiTests(SqlServerFixture database) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UnknownBill_Returns404()
+    public async Task Get_returns_404_when_the_bill_does_not_exist()
     {
-        var get = await _client.GetAsync("/api/bills/999999");
-        var process = await _client.PostAsync("/api/bills/999999/process", content: null);
+        var response = await _client.GetAsync("/api/bills/999999");
 
-        Assert.Equal(HttpStatusCode.NotFound, get.StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, process.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
-    public async Task FeeLookup_ReturnsTheEntryInEffect_404ForUnknown_400WithoutADate()
+    public async Task Process_returns_404_when_the_bill_does_not_exist()
+    {
+        var response = await _client.PostAsync("/api/bills/999999/process", content: null);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Get_returns_the_fee_in_effect_when_the_procedure_code_has_an_entry_on_the_date_of_service()
     {
         await database.AddFeeAsync("A1001", 100.00m, EffectiveFrom);
 
-        var found = await _client.GetAsync("/api/fee-schedule/A1001?dateOfService=2026-03-01");
-        var unknown = await _client.GetAsync("/api/fee-schedule/Z9999?dateOfService=2026-03-01");
-        var noDate = await _client.GetAsync("/api/fee-schedule/A1001");
+        var response = await _client.GetAsync("/api/fee-schedule/A1001?dateOfService=2026-03-01");
 
-        Assert.Equal(HttpStatusCode.OK, found.StatusCode);
-        Assert.Equal(100.00m, (await found.Content.ReadFromJsonAsync<FeeDto>())!.BaseAmount);
-        Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, noDate.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(100.00m, (await response.Content.ReadFromJsonAsync<FeeDto>())!.BaseAmount);
+    }
+
+    [Fact]
+    public async Task Get_returns_404_when_the_fee_procedure_code_is_unknown()
+    {
+        var response = await _client.GetAsync("/api/fee-schedule/Z9999?dateOfService=2026-03-01");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Get_returns_400_when_the_fee_lookup_has_no_date_of_service()
+    {
+        await database.AddFeeAsync("A1001", 100.00m, EffectiveFrom);
+
+        var response = await _client.GetAsync("/api/fee-schedule/A1001");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 }

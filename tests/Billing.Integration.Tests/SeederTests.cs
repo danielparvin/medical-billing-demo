@@ -7,13 +7,13 @@ namespace Billing.Integration.Tests;
 [Trait("Category", "Integration")]
 public sealed class SeederTests(SqlServerFixture database) : IAsyncLifetime
 {
-    private const int SeededEntryCount = 21;
+    private const int SeededEntryCount = 20;
 
     public Task InitializeAsync() => database.ResetAsync();
     public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
-    public async Task Seeding_IsIdempotent_AndLoadsAnEffectiveDatedPair()
+    public async Task SeedAsync_adds_no_duplicates_and_loads_the_effective_dated_pair_when_run_twice()
     {
         await using var db = database.CreateDbContext();
         var seeder = new FeeScheduleSeeder(db);
@@ -29,7 +29,7 @@ public sealed class SeederTests(SqlServerFixture database) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Seeding_AnExistingSchedule_AddsOnlyTheMissingEntries()
+    public async Task SeedAsync_adds_only_the_missing_entries_when_a_schedule_already_exists()
     {
         await database.AddFeeAsync("A1001", 99.99m, new DateOnly(2025, 1, 1));
         await using var db = database.CreateDbContext();

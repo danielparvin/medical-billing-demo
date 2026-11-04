@@ -16,18 +16,15 @@ public static class RepricingEngine
         ArgumentNullException.ThrowIfNull(bill);
         ArgumentNullException.ThrowIfNull(baseFees);
 
-        var working = bill.Lines
+        var results = bill.Lines
             .OrderBy(l => l.LineNumber)
-            .Select(l => PriceBeforeDiscount(l, baseFees))
+            .Select(l => Finish(PriceBeforeRounding(l, baseFees)))
             .ToList();
 
-        ApplyMultipleProcedureDiscount(working);
-
-        var results = working.Select(Finish).ToList();
         return new RepricingResult(results, results.Sum(r => r.AllowedAmount));
     }
 
-    private static WorkingLine PriceBeforeDiscount(LineItem line, IReadOnlyDictionary<string, decimal> baseFees)
+    private static WorkingLine PriceBeforeRounding(LineItem line, IReadOnlyDictionary<string, decimal> baseFees)
     {
         var unknown = line.Modifiers.FirstOrDefault(m => !KnownModifiers.Contains(m));
         if (unknown is not null)
@@ -63,28 +60,6 @@ public static class RepricingEngine
 
         working.Amount = amount;
         return working;
-    }
-
-    public const decimal SecondaryProcedureFactor = 0.50m;
-
-    /// <summary>
-    /// Ranks priced lines by amount (highest first, ties by lowest line number).
-    /// Rank 1 pays in full; every other rank pays <see cref="SecondaryProcedureFactor"/>.
-    /// </summary>
-    private static void ApplyMultipleProcedureDiscount(List<WorkingLine> working)
-    {
-        var ranked = working
-            .Where(w => w.Amount is not null)
-            .OrderByDescending(w => w.Amount)
-            .ThenBy(w => w.Line.LineNumber)
-            .ToList();
-
-        foreach (var line in ranked.Skip(1))
-        {
-            line.Amount *= SecondaryProcedureFactor;
-            line.Steps.Add(new AdjustmentStep(
-                StepNames.MultipleProcedureDiscount, SecondaryProcedureFactor, line.Amount!.Value));
-        }
     }
 
     private static LineResult Finish(WorkingLine working)

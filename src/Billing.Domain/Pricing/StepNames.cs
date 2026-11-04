@@ -6,7 +6,6 @@ public static class StepNames
     public const string Units = "Units";
     public const string Modifier50 = "Modifier50";
     public const string Modifier26 = "Modifier26";
-    public const string MultipleProcedureDiscount = "MultipleProcedureDiscount";
     public const string Rounding = "Rounding";
     public const string BilledChargesCap = "BilledChargesCap";
 }
