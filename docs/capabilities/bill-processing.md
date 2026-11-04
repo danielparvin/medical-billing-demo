@@ -45,7 +45,7 @@ Evidence: [ProcessBillService.cs](../../src/Billing.Api/ProcessBillService.cs), 
   - **PROC-2.8.1** If the line with the unknown modifier is also unpriced, then the Repricing engine shall still throw the exception. (untested)
 - **PROC-2.9** If the bill or the base fees are null, then the Repricing engine shall throw an `ArgumentNullException`. (untested)
 
-Evidence: [RepricingEngine.cs](../../src/Billing.Domain/Pricing/RepricingEngine.cs). Tests: [RepricingEngineTests.cs](../../tests/Billing.Domain.Tests/RepricingEngineTests.cs).
+Evidence: [RepricingEngine.cs](../../src/Billing.Domain/Pricing/RepricingEngine.cs). Tests: [RepricingEngineTests.cs](../../tests/Billing.Domain.Tests/RepricingEngineTests.cs), [RepricingEnginePropertyTests.cs](../../tests/Billing.Domain.Tests/RepricingEnginePropertyTests.cs).
 
 ## PROC-3 Total the allowed amounts
 
@@ -54,7 +54,7 @@ Evidence: [RepricingEngine.cs](../../src/Billing.Domain/Pricing/RepricingEngine.
 - **PROC-3.1** When a bill has unpriced lines, the Repricing engine shall count them as 0 in the total.
 - **PROC-3.2** When a bill has no lines, the Repricing engine shall return no line results and a total of 0.
 
-Evidence: [RepricingEngine.cs](../../src/Billing.Domain/Pricing/RepricingEngine.cs). Tests: `Reprice_pays_every_line_in_full_and_sums_the_total_allowed_when_a_bill_has_several_priced_lines`, `Reprice_counts_unpriced_lines_as_zero_in_the_total_allowed_when_a_bill_has_priced_and_unpriced_lines`, `Reprice_returns_no_lines_and_a_zero_total_when_the_bill_is_empty`.
+Evidence: [RepricingEngine.cs](../../src/Billing.Domain/Pricing/RepricingEngine.cs). Tests: `Reprice_pays_every_line_in_full_and_sums_the_total_allowed_when_a_bill_has_several_priced_lines`, `Reprice_counts_unpriced_lines_as_zero_in_the_total_allowed_when_a_bill_has_priced_and_unpriced_lines`, `Reprice_returns_no_lines_and_a_zero_total_when_the_bill_is_empty`, `Reprice_sets_the_total_allowed_to_the_sum_of_the_line_amounts`.
 
 ## PROC-4 Record an audit trail
 
@@ -77,4 +77,4 @@ Evidence: [RepricingEngine.cs](../../src/Billing.Domain/Pricing/RepricingEngine.
 - **PROC-5.1** The Repricing engine shall return line results in line number order, whatever order the lines arrive in.
 - **PROC-5.2** The Repricing engine shall leave the bill unchanged. (untested)
 
-Evidence: [RepricingEngine.cs](../../src/Billing.Domain/Pricing/RepricingEngine.cs). Tests: `Reprice_returns_lines_in_line_number_order_when_the_input_is_out_of_order`.
+Evidence: [RepricingEngine.cs](../../src/Billing.Domain/Pricing/RepricingEngine.cs). Tests: `Reprice_returns_lines_in_line_number_order_when_the_input_is_out_of_order`, `Reprice_returns_the_same_result_whatever_order_the_lines_arrive_in`.

@@ -1,7 +1,7 @@
 # Medical Billing Testing Demo
 
-A fully synthetic claim-repricing app built to demonstrate unit, component, integration and API
-end-to-end testing in .NET, including Testcontainers. **All data is invented; there is no PHI.**
+A fully synthetic claim-repricing app built to discuss the role of testing in AI-assisted development in .NET, with
+unit, property-based, component, integration, API end-to-end and mutation testing. **All data is invented; there is no PHI.**
 
 ## Prerequisites
 - .NET SDK from `global.json` (.NET 10)
@@ -53,7 +53,7 @@ The SQL Server container is **persistent** with a data volume, so after the firs
 ## Layout
 `Domain` (pure engine) · `Data` (EF Core) · `Contracts` (DTOs) · `Api` (Controllers) · `Web` (Blazor) ·
 `AppHost` (Aspire orchestration) · `ServiceDefaults` (OpenTelemetry, health checks, service discovery, resilience).
-Tests: `Domain.Tests` (unit) · `Web.Tests` (bUnit) · `Integration.Tests` (Testcontainers + `WebApplicationFactory`).
+Tests: `Domain.Tests` (unit and property-based, with CsCheck) · `Web.Tests` (bUnit) · `Integration.Tests` (Testcontainers + `WebApplicationFactory`).
 
 Aspire runs the app; it does not change the tests. The integration tests still start their own throwaway SQL Server
 with Testcontainers, so they stay independent of the AppHost and of any data in the persistent dev container.
@@ -68,17 +68,27 @@ with Testcontainers, so they stay independent of the AppHost and of any data in 
 | `cp-5-mpd-complete` | Discount tests + implementation |
 
 ## Talk arc
-1. Tour the solution and the test pyramid.
-2. Run the unit tests (instant).
-3. **Live-code the discount** on `main` (script below).
-4. Run the integration tests; show `docker ps` in a second terminal while the container starts.
-5. Show the effective-date boundary tests: why a mock could not verify them.
-6. Run the API tests (`WebApplicationFactory` + `FakeTimeProvider`).
-7. Start the AppHost, open the UI from the Aspire dashboard, click **New bill** and enter some lines (a new database
-   has no bills), click **Process Bill**, and watch the discounted totals appear; then open the dashboard's Traces page:
-   one trace spans the button click in `web` and the request in `api`.
-8. **Green tests, wrong code:** put a rounding bug in the engine and watch every test stay green (script below).
-9. **Who tests the tests?** Run Stryker, find an audit-trail gap, and see what mutation testing can't find (script below).
+The thread: **green tests prove only what they assert, so an AI's green build is where review starts, not where it ends.**
+
+1. **What the agent has to work with.** Tour the solution and its test kinds; run the unit tests (instant). Fast tests are
+   the feedback loop an agent can run for itself.
+2. **Green tests, wrong code.** Seed a rounding bug, say that you seeded it, and watch all 69 tests pass (script below).
+3. **Why the agent got it right.** Show the [prompt eval](#prompt-eval): five agents out of five kept the engine correct,
+   and each one mentioned the rule. A written rule may have steered them, but nothing would have failed if they had
+   ignored it.
+4. **State the rule, not an example.** Add a property test and let it find its own failing bill (script below). An
+   agent's examples can share the blind spots of its code; a property comes from the requirement.
+5. **Who tests the tests?** Run Stryker, close an audit-trail gap, then show what it can't find: the rounding bug doesn't
+   move the score (script below).
+6. **Change the rules on purpose.** Have the agent build the discount, test by test (script below). First remove the test
+   the discount contradicts: deciding that a failing test is out of date is the reviewer's call, not the agent's. The
+   property tests stay green through the change, because their rules still hold.
+7. **What a mock can't tell you.** Run the integration tests with `docker ps` in a second terminal, and show the
+   effective-date boundary tests and the API tests (`WebApplicationFactory` + `FakeTimeProvider`). An agent can write a
+   mock that agrees with its own code; a real SQL Server won't play along.
+8. **See it run.** Start the AppHost, open the UI from the Aspire dashboard, click **New bill** and enter some lines (a new
+   database has no bills), click **Process Bill**, and watch the discounted totals appear; then open the dashboard's Traces
+   page: one trace spans the button click in `web` and the request in `api`.
 
 ## Live-coding script (multiple-procedure discount)
 Start on `main`, which has no discount. The tag `cp-5-mpd-complete` has a finished version to refer to, though its
@@ -98,15 +108,16 @@ Write the tests in `tests/Billing.Domain.Tests/MultipleProcedureDiscountTests.cs
 5. unpriced lines are excluded from ranking
 6. half-cent after discount rounds up
 7. discounted amount is still capped at billed charges
-8. same result when the lines arrive in a different order
+8. same result when the lines arrive in a different order (`RepricingEnginePropertyTests` already checks this on generated
+   bills, and it also passed against the finished discount at `cp-5-mpd-complete`; compare it with the example you write)
 
 ## Demo script: green tests, wrong code
-Start from a clean working tree, because the reset discards all uncommitted changes to the engine. This bug is why
-PROC-2.4 is still marked `(untested)` in the capabilities docs: the test below stays out of the suite so the demo works.
+Start from a clean working tree, because the reset discards all uncommitted changes to the engine. The bug is seeded by a
+script; no agent wrote it (see [Prompt eval](#prompt-eval)), so say so on stage. PROC-2.4 is still marked `(untested)` in
+the capabilities docs because the tests below stay out of the suite so the demo works.
 
-1. Run `./scripts/demo-rounding-bug.ps1`, then `git diff`. Each modifier now rounds as it is applied, a plausible
-   result of asking an agent to "show dollars and cents at every audit step".
-2. Run `dotnet test --filter "Category=Unit"`. All 37 tests pass.
+1. Run `./scripts/demo-rounding-bug.ps1`, then `git diff`. Each modifier now rounds as it is applied.
+2. Run `dotnet test --filter "Category=Unit"` (40 tests) or `dotnet test` with Docker running (69 tests). All of them pass.
 3. Add this test to `RepricingEngineTests.cs`. It comes from requirement PROC-2.4, not from the code:
    ```csharp
    [Fact]
@@ -121,9 +132,51 @@ PROC-2.4 is still marked `(untested)` in the capabilities docs: the test below s
        Assert.Equal(60.05m, result.Lines[0].AllowedAmount);
    }
    ```
-4. Run the tests again. The new test fails: expected 60.05, actual 60.06.
-5. Run `./scripts/demo-rounding-bug.ps1 -Reset`. The new test passes against the correct engine.
-6. Run `git restore tests/Billing.Domain.Tests/RepricingEngineTests.cs` to remove the test before the next rehearsal.
+4. Run the tests again. The new test fails: expected 60.05, actual 60.06. Leave the bug in place for the next demo.
+
+## Demo script: state the rule, not an example
+You needed to know 100.09 was a bad fee to write that test. A property doesn't need to know.
+
+1. With the bug still applied, add this test to `RepricingEnginePropertyTests.cs`:
+   ```csharp
+   [Fact]
+   [Trait("Requirement", "PROC-2.4")]
+   public void Reprice_rounds_only_once_after_all_the_multipliers()
+   {
+       Gen.Select(Money, Gen.Int[1, 999], Modifiers).Sample(t =>
+       {
+           var (fee, units, modifiers) = t;
+           var bill = new BillBuilder().WithLine(1, "A1001", 1_000_000_000m, units, modifiers).Build();
+
+           var result = RepricingEngine.Reprice(bill, BillBuilder.Fees(("A1001", fee)));
+
+           var exact = fee * units
+               * (modifiers.Contains("50") ? RepricingEngine.BilateralFactor : 1m)
+               * (modifiers.Contains("26") ? RepricingEngine.ProfessionalComponentFactor : 1m);
+           return result.Lines[0].AllowedAmount == Math.Round(exact, 2, MidpointRounding.AwayFromZero);
+       }, iter: Iterations);
+   }
+   ```
+2. Run the tests. CsCheck reports a failing bill it found and a seed that reproduces it, such as `(62.31, 609, [50, 26])`.
+   The bill differs from run to run, so don't promise a particular one. The formula in the test is the rule written out
+   again, so someone still has to check that it matches the requirement.
+3. Run `./scripts/demo-rounding-bug.ps1 -Reset`. Both new tests pass against the correct engine.
+4. Run `git restore tests/Billing.Domain.Tests/RepricingEngineTests.cs tests/Billing.Domain.Tests/RepricingEnginePropertyTests.cs`
+   to remove them before the next rehearsal.
+
+## Prompt eval
+Could an agent write this bug unprompted? Five fresh agents each got the prompt "Show dollars and cents at every audit
+step." on a clone of commit `f52c5b8`, which predates these demos. **None of them wrote the bug.**
+
+- All five made the same display-only change to `BillEditor.razor`, added a test, and updated UI-6.4. None changed the
+  engine, and all five passed the PROC-2.4 test.
+- All five mentioned the round-once rule in their reports, so the doc comment and capabilities docs probably helped, but
+  this eval can't show that without a run that removes them.
+- All five warned that the audit steps can now look wrong on screen, because hidden fractions of a cent can make a step
+  appear not to multiply exactly. All five also pointed out that they had not added a `$` sign.
+
+This is a small sample run through Claude Code subagents, not your stage setup. Don't rely on an agent producing the bug
+live: use the script.
 
 ## Demo script: who tests the tests?
 A run takes about a minute, so start it before you begin talking about it, or open a report saved earlier.
@@ -146,7 +199,8 @@ A run takes about a minute, so start it before you begin talking about it, or op
            result.Lines[0].Steps.Select(s => s.Step));
    }
    ```
-4. Run Stryker again. That mutant is now killed; with this test alone the score rises to **87.10%**.
+4. Run Stryker again. That mutant is now killed; with this test alone the score rises to **87.10%**. Then run
+   `git restore tests/Billing.Domain.Tests/RepricingEngineTests.cs` to remove it before the next rehearsal.
 5. Make the limit clear: Stryker also scores **83.87%** with the rounding bug applied. It makes small changes to the code
    that exists and checks whether a test notices. It can't tell you that the code breaks a rule nobody wrote a test for.
 
