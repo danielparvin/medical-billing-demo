@@ -6,7 +6,8 @@ end-to-end testing in .NET, including Testcontainers. **All data is invented; th
 ## Prerequisites
 - .NET SDK from `global.json` (.NET 10)
 - Docker (SQL Server image is **x64-only**)
-- `dotnet tool restore` (restores the repo-local `dotnet-ef`; only needed to add migrations)
+- `dotnet tool restore` (restores the repo-local `dotnet-ef` and `dotnet-stryker`; only needed to add migrations or
+  run mutation testing)
 - A trusted HTTPS development certificate for the Aspire dashboard: `dotnet dev-certs https --trust` once per
   machine (Windows asks you to confirm). Do this before the talk, not on stage.
 
@@ -17,6 +18,12 @@ Open `Billing.slnx` in Visual Studio 2022 17.13+ or Visual Studio 2026.
 dotnet test --filter "Category=Unit"          # instant, no Docker
 dotnet test --filter "Category=Integration"   # starts one SQL Server container for the whole run
 dotnet test                                   # everything
+```
+
+Mutation testing of the repricing engine takes about a minute and needs no Docker:
+```bash
+cd tests/Billing.Domain.Tests
+dotnet tool run dotnet-stryker --open-report
 ```
 
 ## Run the app (Aspire)
@@ -70,6 +77,8 @@ with Testcontainers, so they stay independent of the AppHost and of any data in 
 7. Start the AppHost, open the UI from the Aspire dashboard, click **New bill** and enter some lines (a new database
    has no bills), click **Process Bill**, and watch the discounted totals appear; then open the dashboard's Traces page:
    one trace spans the button click in `web` and the request in `api`.
+8. **Green tests, wrong code:** put a rounding bug in the engine and watch every test stay green (script below).
+9. **Who tests the tests?** Run Stryker, find an audit-trail gap, and see what mutation testing can't find (script below).
 
 ## Live-coding script (multiple-procedure discount)
 Start on `main`, which has no discount. The tag `cp-5-mpd-complete` has a finished version to refer to, though its
@@ -91,8 +100,61 @@ Write the tests in `tests/Billing.Domain.Tests/MultipleProcedureDiscountTests.cs
 7. discounted amount is still capped at billed charges
 8. same result when the lines arrive in a different order
 
+## Demo script: green tests, wrong code
+Start from a clean working tree, because the reset discards all uncommitted changes to the engine. This bug is why
+PROC-2.4 is still marked `(untested)` in the capabilities docs: the test below stays out of the suite so the demo works.
+
+1. Run `./scripts/demo-rounding-bug.ps1`, then `git diff`. Each modifier now rounds as it is applied, a plausible
+   result of asking an agent to "show dollars and cents at every audit step".
+2. Run `dotnet test --filter "Category=Unit"`. All 37 tests pass.
+3. Add this test to `RepricingEngineTests.cs`. It comes from requirement PROC-2.4, not from the code:
+   ```csharp
+   [Fact]
+   [Trait("Requirement", "PROC-2.4")]
+   public void Reprice_rounds_only_once_after_all_the_multipliers_when_a_line_has_both_modifiers()
+   {
+       // 100.09 x 1.50 x 0.40 = 60.054, which rounds to 60.05. Rounding after each factor gives 60.06.
+       var bill = new BillBuilder().WithLine(1, "A1001", 500m, 1, "50", "26").Build();
+
+       var result = RepricingEngine.Reprice(bill, BillBuilder.Fees(("A1001", 100.09m)));
+
+       Assert.Equal(60.05m, result.Lines[0].AllowedAmount);
+   }
+   ```
+4. Run the tests again. The new test fails: expected 60.05, actual 60.06.
+5. Run `./scripts/demo-rounding-bug.ps1 -Reset`. The new test passes against the correct engine.
+6. Run `git restore tests/Billing.Domain.Tests/RepricingEngineTests.cs` to remove the test before the next rehearsal.
+
+## Demo script: who tests the tests?
+A run takes about a minute, so start it before you begin talking about it, or open a report saved earlier.
+
+1. Run Stryker (see [Run the tests](#run-the-tests)). On the correct engine it scores **83.87%**, with 5 surviving mutants.
+2. In the report, show the survivor on the `Modifier26` line of `RepricingEngine.cs`: deleting that audit-trail step
+   fails no test, so an agent could drop it and stay green.
+3. Add this test to `RepricingEngineTests.cs`:
+   ```csharp
+   [Fact]
+   [Trait("Requirement", "PROC-4.5")]
+   public void Reprice_records_the_professional_component_step_after_the_bilateral_step_when_a_line_has_both_modifiers()
+   {
+       var bill = new BillBuilder().WithLine(1, "A1001", 500m, 1, "50", "26").Build();
+
+       var result = RepricingEngine.Reprice(bill, BillBuilder.Fees(("A1001", 100.00m)));
+
+       Assert.Equal(
+           [StepNames.BaseFee, StepNames.Units, StepNames.Modifier50, StepNames.Modifier26, StepNames.Rounding],
+           result.Lines[0].Steps.Select(s => s.Step));
+   }
+   ```
+4. Run Stryker again. That mutant is now killed; with this test alone the score rises to **87.10%**.
+5. Make the limit clear: Stryker also scores **83.87%** with the rounding bug applied. It makes small changes to the code
+   that exists and checks whether a test notices. It can't tell you that the code breaks a rule nobody wrote a test for.
+
+The other survivors are the two null checks, the unknown-modifier message, and `>` versus `>=` on the billed-charges cap.
+
 ## Demo-day readiness
 - The day before: `./scripts/pull-images.ps1`, then run the integration tests once while online.
+- The day before: run Stryker once and keep the report from `tests/Billing.Domain.Tests/StrykerOutput` as a fallback.
 - **Fallback if Docker misbehaves:** show a saved terminal capture of a green integration run; unit and
   component tests need no Docker.
 - Rehearse the live-coding segment twice. To reset, run `git restore .` to discard all uncommitted changes, delete the
