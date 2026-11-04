@@ -11,6 +11,27 @@ public static class RepricingEngine
 
     private static readonly HashSet<string> KnownModifiers = ["50", "26"];
 
+    /// <summary>
+    /// Prices every line of a bill from its base fee. The bill is not changed; the caller applies the result.
+    /// </summary>
+    /// <param name="bill">The bill whose lines are priced.</param>
+    /// <param name="baseFees">
+    /// Base fee by procedure code. These must already be the fees in effect on the bill's date of service,
+    /// because the engine does not look at dates.
+    /// </param>
+    /// <returns>
+    /// One <see cref="LineResult"/> per line, ordered by line number, with its audit trail in
+    /// <see cref="LineResult.Steps"/>, and the sum of the allowed amounts in <see cref="RepricingResult.TotalAllowed"/>.
+    /// </returns>
+    /// <remarks>
+    /// A line whose procedure code is not in <paramref name="baseFees"/> does not stop the others: it comes back as
+    /// <see cref="LinePricingStatus.Unpriced"/> with <see cref="UnpricedReasons.NoFeeScheduleEntry"/>, an allowed amount
+    /// of 0 and no steps. A priced line's amount is rounded once and then capped at its billed amount.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="bill"/> or <paramref name="baseFees"/> is null.</exception>
+    /// <exception cref="ArgumentException">
+    /// Any line, priced or not, has a modifier other than 50 or 26. No partial result is returned.
+    /// </exception>
     public static RepricingResult Reprice(Bill bill, IReadOnlyDictionary<string, decimal> baseFees)
     {
         ArgumentNullException.ThrowIfNull(bill);
