@@ -63,7 +63,7 @@ with Testcontainers, so they stay independent of the AppHost and of any data in 
 ## Talk arc
 1. Tour the solution and the test pyramid.
 2. Run the unit tests (instant).
-3. **Live-code the discount** on `main` with the finished code removed (script below).
+3. **Live-code the discount** on `main` (script below).
 4. Run the integration tests; show `docker ps` in a second terminal while the container starts.
 5. Show the effective-date boundary tests: why a mock could not verify them.
 6. Run the API tests (`WebApplicationFactory` + `FakeTimeProvider`).
@@ -72,11 +72,12 @@ with Testcontainers, so they stay independent of the AppHost and of any data in 
    one trace spans the button click in `web` and the request in `api`.
 
 ## Live-coding script (multiple-procedure discount)
-Start on `main` with the finished discount removed, leaving these edits uncommitted:
-- In `src/Billing.Domain/Pricing/RepricingEngine.cs`, remove the `ApplyMultipleProcedureDiscount` call and method and
-  the `SecondaryProcedureFactor` constant.
-- Delete `tests/Billing.Domain.Tests/MultipleProcedureDiscountTests.cs`.
-- In `tests/Billing.Integration.Tests/BillsApiTests.cs`, remove `ProcessingAMultiLineBill_AppliesTheMultipleProcedureDiscount`.
+Start on `main`, which has no discount. The tag `cp-5-mpd-complete` has a finished version to refer to, though its
+tests use the older naming.
+
+The discount contradicts one test on `main`, so before you start, remove
+`Reprice_pays_every_line_in_full_and_sums_the_total_allowed_when_a_bill_has_several_priced_lines` from
+`tests/Billing.Domain.Tests/RepricingEngineTests.cs` and leave that edit uncommitted.
 
 Rule: rank priced lines by amount after units and modifiers (highest first, ties by lowest line number);
 rank 1 pays 100%, every other rank pays 50%. Round once per line half-up; cap at billed charges.
@@ -94,8 +95,8 @@ Write the tests in `tests/Billing.Domain.Tests/MultipleProcedureDiscountTests.cs
 - The day before: `./scripts/pull-images.ps1`, then run the integration tests once while online.
 - **Fallback if Docker misbehaves:** show a saved terminal capture of a green integration run; unit and
   component tests need no Docker.
-- Rehearse the live-coding segment twice. `git restore .` discards all uncommitted changes and puts the finished
-  discount back, so remove it again before the next run.
+- Rehearse the live-coding segment twice. To reset, run `git restore .` to discard all uncommitted changes, delete the
+  untracked `MultipleProcedureDiscountTests.cs`, and remove the contradicting test again before the next run.
 
 ## Known exceptions
 - `Billing.Web.Tests` suppresses NuGet advisory GHSA-pgww-w46g-26qg for AngleSharp 1.2.0. bUnit 1.40 (the last 1.x)

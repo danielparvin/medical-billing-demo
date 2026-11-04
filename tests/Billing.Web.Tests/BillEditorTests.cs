@@ -115,7 +115,7 @@ public sealed class BillEditorTests : TestContext
     }
 
     [Fact]
-    public void CodeField_StopsTypingAfterFiveCharacters()
+    public void BuildRenderTree_limits_the_code_field_to_five_characters()
     {
         var cut = RenderComponent<BillEditor>();
 
@@ -131,7 +131,7 @@ public sealed class BillEditorTests : TestContext
     [InlineData("#save", "Ä1001")]
     [InlineData("#process", "B12345")]
     [InlineData("#process", "A-100")]
-    public void InvalidCode_BlocksTheApiCallAndShowsAnError(string button, string code)
+    public void SaveCoreAsync_blocks_the_api_call_and_shows_an_error_when_the_code_is_invalid(string button, string code)
     {
         var cut = RenderComponent<BillEditor>();
         cut.Find(".code").Change(code);
@@ -149,7 +149,7 @@ public sealed class BillEditorTests : TestContext
     [InlineData("b1234")]
     [InlineData("12345")]
     [InlineData("ABCDE")]
-    public void ValidCode_IsSentToTheApi(string code)
+    public void SaveCoreAsync_sends_the_code_to_the_api_when_the_code_is_valid(string code)
     {
         _api.On(HttpMethod.Post, "/api/bills", () =>
             FakeApiHandler.Json(HttpStatusCode.Created, Bill("Draft", null, Line(1))));
@@ -163,7 +163,7 @@ public sealed class BillEditorTests : TestContext
     }
 
     [Fact]
-    public void BadCode_IsFlaggedOnLeavingTheField_ButAnUntouchedEmptyOneIsNot()
+    public void ShowCodeError_flags_the_field_when_a_bad_code_is_entered_but_not_when_it_is_untouched_and_empty()
     {
         var cut = RenderComponent<BillEditor>();
         Assert.DoesNotContain("is-invalid", cut.Find(".code").ClassList);
@@ -174,7 +174,7 @@ public sealed class BillEditorTests : TestContext
     }
 
     [Fact]
-    public void CorrectingACode_ClearsItsError()
+    public void ShowCodeError_clears_the_error_when_the_code_is_corrected()
     {
         var cut = RenderComponent<BillEditor>();
         cut.Find(".code").Change("A100");
@@ -187,7 +187,7 @@ public sealed class BillEditorTests : TestContext
     }
 
     [Fact]
-    public void OnlyTheLineWithABadCodeIsFlagged()
+    public void ShowCodeError_flags_only_the_bad_line_when_other_lines_have_valid_codes()
     {
         _api.On(HttpMethod.Get, "/api/bills/1", () =>
             FakeApiHandler.Json(HttpStatusCode.OK, Bill("Draft", null, Line(1), Line(2))));
