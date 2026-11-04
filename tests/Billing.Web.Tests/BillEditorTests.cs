@@ -33,7 +33,7 @@ public sealed class BillEditorTests : TestContext
     }
 
     [Fact]
-    public void ExistingBill_RendersOneRowPerLine()
+    public void OnParametersSetAsync_renders_one_row_per_line_when_the_bill_exists()
     {
         _api.On(HttpMethod.Get, "/api/bills/1", () =>
             FakeApiHandler.Json(HttpStatusCode.OK, Bill("Draft", null, Line(1), Line(2))));
@@ -44,7 +44,7 @@ public sealed class BillEditorTests : TestContext
     }
 
     [Fact]
-    public void AddLine_AppendsARow()
+    public void AddLine_appends_a_row()
     {
         var cut = RenderComponent<BillEditor>();
         Assert.Single(cut.FindAll("[data-testid=line-row]"));
@@ -55,7 +55,7 @@ public sealed class BillEditorTests : TestContext
     }
 
     [Fact]
-    public void RemoveLine_DropsTheRow()
+    public void RemoveLine_drops_the_row()
     {
         _api.On(HttpMethod.Get, "/api/bills/1", () =>
             FakeApiHandler.Json(HttpStatusCode.OK, Bill("Draft", null, Line(1), Line(2))));
@@ -67,7 +67,7 @@ public sealed class BillEditorTests : TestContext
     }
 
     [Fact]
-    public void ProcessBill_SavesThenProcessesAndShowsAllowedAmounts()
+    public void ProcessAsync_saves_then_processes_the_bill_and_shows_the_allowed_amounts()
     {
         _api.On(HttpMethod.Get, "/api/bills/1", () =>
             FakeApiHandler.Json(HttpStatusCode.OK, Bill("Draft", null, Line(1))));
@@ -85,7 +85,7 @@ public sealed class BillEditorTests : TestContext
     }
 
     [Fact]
-    public void ApiValidationError_IsShownToTheUser()
+    public void SaveAsync_shows_the_validation_error_when_the_api_rejects_the_bill()
     {
         _api.On(HttpMethod.Get, "/api/bills/1", () =>
             FakeApiHandler.Json(HttpStatusCode.OK, Bill("Draft", null, Line(1))));
@@ -101,7 +101,7 @@ public sealed class BillEditorTests : TestContext
     }
 
     [Fact]
-    public void UnreachableApi_ShowsAReadableError()
+    public void SaveAsync_shows_a_readable_error_when_the_api_is_unreachable()
     {
         Services.AddSingleton(
             new BillingApiClient(new HttpClient(new ThrowingHandler()) { BaseAddress = new Uri("http://api.test/") }));

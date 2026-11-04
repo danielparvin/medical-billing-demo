@@ -12,7 +12,7 @@ public sealed class PersistenceTests(SqlServerFixture database) : IAsyncLifetime
     public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
-    public async Task Bill_WithLinesModifiersAndAdjustments_RoundTrips()
+    public async Task GetAsync_returns_the_saved_values_when_a_bill_has_lines_modifiers_and_adjustments()
     {
         var processedAt = new DateTime(2026, 3, 15, 12, 0, 0, DateTimeKind.Utc);
         int billId;
@@ -59,7 +59,7 @@ public sealed class PersistenceTests(SqlServerFixture database) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetAsync_ReturnsLinesInLineNumberOrder()
+    public async Task GetAsync_returns_lines_in_line_number_order_when_they_were_saved_out_of_order()
     {
         int billId;
         await using (var db = database.CreateDbContext())
@@ -86,7 +86,7 @@ public sealed class PersistenceTests(SqlServerFixture database) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task FeeSchedule_RejectsTwoEntriesWithTheSameCodeAndEffectiveFrom()
+    public async Task SaveChangesAsync_throws_a_DbUpdateException_when_two_fee_entries_have_the_same_code_and_effective_from()
     {
         await database.AddFeeAsync("A1001", 100.00m, new DateOnly(2026, 1, 1));
 
