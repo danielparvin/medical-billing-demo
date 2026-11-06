@@ -56,6 +56,7 @@ The SQL Server container is **persistent** with a data volume, so after the firs
 ## Layout
 `Domain` (pure engine) · `Data` (EF Core) · `Contracts` (DTOs) · `Api` (Controllers) · `Web` (Blazor) ·
 `AppHost` (Aspire orchestration) · `ServiceDefaults` (OpenTelemetry, health checks, service discovery, resilience).
+`evals/` holds the agent evals: scripts that prepare repo copies, the prompts, and the hidden graders.
 Tests: `Domain.Tests` (unit and property-based, with CsCheck) · `Web.Tests` (bUnit) · `Integration.Tests` (Testcontainers + `WebApplicationFactory`).
 
 Aspire runs the app; it does not change the tests. The integration tests still start their own throwaway SQL Server
@@ -196,7 +197,8 @@ tags and no live-coding script, so the agents had no hint about the contradictin
 - All five added their own tests, a new audit step and new requirements in the capabilities docs, and none ran the
   integration tests.
 
-Don't rely on an agent producing the rounding bug live: use the script.
+To rerun these evals, see [evals/README.md](evals/README.md). Don't rely on an agent producing the rounding bug live:
+use the script.
 
 ## Demo script: who tests the tests?
 A run takes about a minute, so start it before you begin talking about it, or open a report saved earlier.
