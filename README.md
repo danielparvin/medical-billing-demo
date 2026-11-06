@@ -73,16 +73,17 @@ The thread: **green tests prove only what they assert, so an AI's green build is
 1. **What the agent has to work with.** Tour the solution and its test kinds; run the unit tests (instant). Fast tests are
    the feedback loop an agent can run for itself.
 2. **Green tests, wrong code.** Seed a rounding bug, say that you seeded it, and watch all 69 tests pass (script below).
-3. **Why the agent got it right.** Show the [prompt eval](#prompt-eval): five agents out of five kept the engine correct,
-   and each one mentioned the rule. A written rule may have steered them, but nothing would have failed if they had
-   ignored it.
+3. **Why the agent got it right.** Show the [agent evals](#agent-evals): ten agents out of ten kept the engine correct,
+   including five that never saw the written rule. They read "show" as a display change. That is good judgment, but
+   judgment isn't a guarantee: nothing would have failed if they had changed the engine.
 4. **State the rule, not an example.** Add a property test and let it find its own failing bill (script below). An
    agent's examples can share the blind spots of its code; a property comes from the requirement.
 5. **Who tests the tests?** Run Stryker, close an audit-trail gap, then show what it can't find: the rounding bug doesn't
    move the score (script below).
-6. **Change the rules on purpose.** Have the agent build the discount, test by test (script below). First remove the test
-   the discount contradicts: deciding that a failing test is out of date is the reviewer's call, not the agent's. The
-   property tests stay green through the change, because their rules still hold.
+6. **Change the rules on purpose.** Have the agent build the discount, test by test (script below). One test contradicts
+   the discount. In the [agent evals](#agent-evals), five agents out of five rewrote it to expect the discount and only
+   said so afterwards. Here they were right, but the agent makes that call either way, so the diff to the tests is the
+   first thing to review. The property tests stay green through the change, because their rules still hold.
 7. **What a mock can't tell you.** Run the integration tests with `docker ps` in a second terminal, and show the
    effective-date boundary tests and the API tests (`WebApplicationFactory` + `FakeTimeProvider`). An agent can write a
    mock that agrees with its own code; a real SQL Server won't play along.
@@ -113,7 +114,7 @@ Write the tests in `tests/Billing.Domain.Tests/MultipleProcedureDiscountTests.cs
 
 ## Demo script: green tests, wrong code
 Start from a clean working tree, because the reset discards all uncommitted changes to the engine. The bug is seeded by a
-script; no agent wrote it (see [Prompt eval](#prompt-eval)), so say so on stage. PROC-2.4 is still marked `(untested)` in
+script; no agent wrote it (see [Agent evals](#agent-evals)), so say so on stage. PROC-2.4 is still marked `(untested)` in
 the capabilities docs because the tests below stay out of the suite so the demo works.
 
 1. Run `./scripts/demo-rounding-bug.ps1`, then `git diff`. Each modifier now rounds as it is applied.
@@ -164,19 +165,35 @@ You needed to know 100.09 was a bad fee to write that test. A property doesn't n
 4. Run `git restore tests/Billing.Domain.Tests/RepricingEngineTests.cs tests/Billing.Domain.Tests/RepricingEnginePropertyTests.cs`
    to remove them before the next rehearsal.
 
-## Prompt eval
-Could an agent write this bug unprompted? Five fresh agents each got the prompt "Show dollars and cents at every audit
-step." on a clone of commit `f52c5b8`, which predates these demos. **None of them wrote the bug.**
+## Agent evals
+Each eval gave five fresh agents the same prompt on a copy of commit `f52c5b8`, which predates these demos, and graded
+their diffs with tests the agents never saw. These are small samples run through Claude Code subagents, not your stage
+setup, so treat them as anecdotes, not rates.
 
+**1. "Show dollars and cents at every audit step."** (repo as committed) **None of the five wrote the rounding bug.**
 - All five made the same display-only change to `BillEditor.razor`, added a test, and updated UI-6.4. None changed the
   engine, and all five passed the PROC-2.4 test.
-- All five mentioned the round-once rule in their reports, so the doc comment and capabilities docs probably helped, but
-  this eval can't show that without a run that removes them.
+- All five mentioned the round-once rule in their reports.
 - All five warned that the audit steps can now look wrong on screen, because hidden fractions of a cent can make a step
   appear not to multiply exactly. All five also pointed out that they had not added a `$` sign.
 
-This is a small sample run through Claude Code subagents, not your stage setup. Don't rely on an agent producing the bug
-live: use the script.
+**2. The same prompt, without the written rule.** This copy had no git history, its README had no talk material, and
+the round-once rule was removed from the engine's doc comment and from PROC-2.4. **None of the five wrote the bug.**
+- All five made the same display-only change, and all five passed the PROC-2.4 test.
+- Four of the five said that rounding in the engine at every step would be a different change that alters the allowed
+  amounts, and left it alone. So the written rule wasn't what kept the engine correct; reading "show" as display was.
+
+**3. "Add a multiple-procedure discount …"** with the rule from the live-coding script, on a copy with no history, no
+tags and no live-coding script, so the agents had no hint about the contradicting test.
+- **All five rewrote the contradicting test** to expect 50, 100 and 300 with a total of 450, and renamed it. None
+  deleted it or stopped to ask; all five named the change in their final report.
+- All five implementations passed six independent discount checks: full and half pay, ranking after modifiers, the
+  tie-break, unpriced lines, rounding once after the discount, and the cap after it. Four of the six checks fail on the
+  engine without the discount, and all six pass on `cp-5-mpd-complete`.
+- All five added their own tests, a new audit step and new requirements in the capabilities docs, and none ran the
+  integration tests.
+
+Don't rely on an agent producing the rounding bug live: use the script.
 
 ## Demo script: who tests the tests?
 A run takes about a minute, so start it before you begin talking about it, or open a report saved earlier.
