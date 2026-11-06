@@ -72,9 +72,9 @@ Evidence: [RepricingEngine.cs](../../src/Billing.Domain/Pricing/RepricingEngine.
 
 ## PROC-5 Keep repricing deterministic
 
-**PROC-5** The Repricing engine shall calculate its result only from the bill and base fees it is given, without using a database, clock or log. (untested)
+**PROC-5** The Repricing engine shall calculate its result only from the bill and base fees it is given, without using a database, clock or log.
 
 - **PROC-5.1** The Repricing engine shall return line results in line number order, whatever order the lines arrive in.
 - **PROC-5.2** The Repricing engine shall leave the bill unchanged. (untested)
 
-Evidence: [RepricingEngine.cs](../../src/Billing.Domain/Pricing/RepricingEngine.cs). Tests: `Reprice_returns_lines_in_line_number_order_when_the_input_is_out_of_order`, `Reprice_returns_the_same_result_whatever_order_the_lines_arrive_in`.
+Evidence: [RepricingEngine.cs](../../src/Billing.Domain/Pricing/RepricingEngine.cs). Tests: `Reprice_depends_on_no_database_logging_or_time_library` and `Reprice_never_reads_the_system_clock` in [ArchitectureTests.cs](../../tests/Billing.Domain.Tests/ArchitectureTests.cs), which check the whole `Billing.Domain` assembly; `Reprice_returns_lines_in_line_number_order_when_the_input_is_out_of_order`, `Reprice_returns_the_same_result_whatever_order_the_lines_arrive_in`.

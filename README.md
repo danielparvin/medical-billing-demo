@@ -57,7 +57,7 @@ The SQL Server container is **persistent** with a data volume, so after the firs
 `Domain` (pure engine) · `Data` (EF Core) · `Contracts` (DTOs) · `Api` (Controllers) · `Web` (Blazor) ·
 `AppHost` (Aspire orchestration) · `ServiceDefaults` (OpenTelemetry, health checks, service discovery, resilience).
 `evals/` holds the agent evals: scripts that prepare repo copies, the prompts, and the hidden graders.
-Tests: `Domain.Tests` (unit and property-based, with CsCheck) · `Web.Tests` (bUnit) · `Integration.Tests` (Testcontainers + `WebApplicationFactory`).
+Tests: `Domain.Tests` (unit, property-based with CsCheck, and architecture with NetArchTest) · `Web.Tests` (bUnit) · `Integration.Tests` (Testcontainers + `WebApplicationFactory`).
 
 Aspire runs the app; it does not change the tests. The integration tests still start their own throwaway SQL Server
 with Testcontainers, so they stay independent of the AppHost and of any data in the persistent dev container.
@@ -76,10 +76,11 @@ The thread: **green tests prove only what they assert, so an AI's green build is
 
 1. **What the agent has to work with.** Tour the solution and its test kinds; run the unit tests (instant). Fast tests are
    the feedback loop an agent can run for itself.
-2. **Green tests, wrong code.** Seed a rounding bug, say that you seeded it, and watch all 69 tests pass (script below).
+2. **Green tests, wrong code.** Seed a rounding bug, say that you seeded it, and watch all 71 tests pass (script below).
 3. **Why the agent got it right.** Show the [agent evals](#agent-evals): ten agents out of ten kept the engine correct,
    including five that never saw the written rule. They read "show" as a display change. That is good judgment, but
-   judgment isn't a guarantee: nothing would have failed if they had changed the engine.
+   judgment isn't a guarantee: nothing would have failed if they had changed the engine. Then turn a written rule into
+   a failing build with the architecture tests (script below).
 4. **State the rule, not an example.** Add a property test and let it find its own failing bill (script below). An
    agent's examples can share the blind spots of its code; a property comes from the requirement.
 5. **Who tests the tests?** Run Stryker, close an audit-trail gap, then show what it can't find: the rounding bug doesn't
@@ -122,7 +123,7 @@ script; no agent wrote it (see [Agent evals](#agent-evals)), so say so on stage.
 the capabilities docs because the tests below stay out of the suite so the demo works.
 
 1. Run `./scripts/demo-rounding-bug.ps1`, then `git diff`. Each modifier now rounds as it is applied.
-2. Run `dotnet test --filter "Category=Unit"` (40 tests) or `dotnet test` with Docker running (69 tests). All of them pass.
+2. Run `dotnet test --filter "Category=Unit"` (42 tests) or `dotnet test` with Docker running (71 tests). All of them pass.
 3. Add this test to `RepricingEngineTests.cs`. It comes from requirement PROC-2.4, not from the code:
    ```csharp
    [Fact]
@@ -168,6 +169,19 @@ You needed to know 100.09 was a bad fee to write that test. A property doesn't n
 3. Run `./scripts/demo-rounding-bug.ps1 -Reset`. Both new tests pass against the correct engine.
 4. Run `git restore tests/Billing.Domain.Tests/RepricingEngineTests.cs tests/Billing.Domain.Tests/RepricingEnginePropertyTests.cs`
    to remove them before the next rehearsal.
+
+## Demo script: turn a written rule into a failing build
+PROC-5 says the engine uses no database, clock or log. `ArchitectureTests.cs` checks that against the compiled
+`Billing.Domain` assembly, so CI enforces it on every pull request.
+
+1. In `RepricingEngine.Reprice`, add `var stamp = DateTime.Now;` after the two null checks.
+2. Run `dotnet test --filter "Category=Unit"`. Only `Reprice_never_reads_the_system_clock` fails, and it names
+   `RepricingEngine`.
+3. Show why that rule is custom: `DateTime` itself is allowed, because a bill records when it was processed, so a
+   dependency rule can't see `DateTime.Now`. The rule reads each method's IL for calls to the clock instead.
+4. Tell the story of its first version: it passed when the clock was read inside a lambda, because the compiler moves a
+   lambda's body into a hidden nested type. Planting a violation is how you find out whether a rule can fail.
+5. Run `git restore src/Billing.Domain/Pricing/RepricingEngine.cs`.
 
 ## Agent evals
 Each eval gave five fresh agents the same prompt on a copy of commit `f52c5b8`, which predates these demos, and graded
