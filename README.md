@@ -20,6 +20,9 @@ dotnet test --filter "Category=Integration"   # starts one SQL Server container 
 dotnet test                                   # everything
 ```
 
+CI ([ci.yml](.github/workflows/ci.yml)) runs both categories on every pull request and every push to `main`. It
+selects tests by category, so a test without a `Category` trait of `Unit` or `Integration` never runs in CI.
+
 Mutation testing of the repricing engine takes about a minute and needs no Docker:
 ```bash
 cd tests/Billing.Domain.Tests
