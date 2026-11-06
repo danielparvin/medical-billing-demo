@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Build
+        run: dotnet build --configuration Release
+
+      # Unit and component tests: fast, no Docker.
+      - name: Unit tests
+        run: dotnet test --configuration Release --no-build --filter "Category=Unit"
+
+      # Integration tests: Testcontainers starts SQL Server in the runner's Docker.
+      - name: Integration tests
+        run: dotnet test --configuration Release --no-build --filter "Category=Integration"
