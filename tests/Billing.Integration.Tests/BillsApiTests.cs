@@ -156,6 +156,48 @@ public sealed class BillsApiTests(SqlServerFixture database) : IAsyncLifetime
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [Theory]
+    [Trait("Requirement", "BILL-5.6")]
+    [InlineData("A-100")]
+    [InlineData("A 100")]
+    [InlineData("A1.01")]
+    [InlineData("Ä1001")]
+    [InlineData("A100")]
+    [InlineData("B12345")]
+    [InlineData("")]
+    public async Task Create_returns_400_naming_the_code_rule_when_the_procedure_code_is_not_5_letters_or_digits(string code)
+    {
+        var response = await _client.PostAsJsonAsync("/api/bills", TestBills.Request(TestBills.Line(1, code, 100m)));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("exactly 5 letters or digits", await response.Content.ReadAsStringAsync());
+    }
+
+    [Theory]
+    [Trait("Requirement", "BILL-5.6")]
+    [InlineData("A1001")]
+    [InlineData("a1b2c")]
+    [InlineData("12345")]
+    [InlineData("ABCDE")]
+    public async Task Create_returns_201_when_the_procedure_code_is_5_letters_or_digits(string code)
+    {
+        var response = await _client.PostAsJsonAsync("/api/bills", TestBills.Request(TestBills.Line(1, code, 100m)));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
+    [Fact]
+    [Trait("Requirement", "BILL-5.6")]
+    public async Task Update_returns_400_when_the_procedure_code_has_a_character_other_than_a_letter_or_digit()
+    {
+        var created = await CreateAsync(TestBills.Request(TestBills.Line(1, "A1001", 100m)));
+
+        var response = await _client.PutAsJsonAsync($"/api/bills/{created.Id}",
+            TestBills.Request(TestBills.Line(1, "A-100", 100m)));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     [Fact]
     public async Task Create_returns_400_when_line_numbers_are_duplicated()
     {

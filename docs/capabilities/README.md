@@ -98,7 +98,6 @@ These look like defects or inconsistencies. They are recorded here, not fixed, a
 
 | Gap | Where | Related |
 |---|---|---|
-| The API accepts any 5-character code, such as `A-100`. Only the UI restricts codes to letters and digits. | [LineItemRequest.cs](../../src/Billing.Contracts/LineItemRequest.cs) | BILL-5.6, UI-3 |
 | Loading the bill list or an existing bill doesn't catch an unreachable API, unlike save and process. | [BillingApiClient.cs](../../src/Billing.Web/Services/BillingApiClient.cs) | UI-1, UI-2, UI-7.4 |
 | The editor stays editable after "Bill N was not found", and saving then gets a 404 from the replace call. | [BillEditor.razor](../../src/Billing.Web/Components/Pages/BillEditor.razor) | UI-2.8, BILL-2.2 |
 | After a processed bill is edited, the old results stay on screen until the next save. | [BillEditor.razor](../../src/Billing.Web/Components/Pages/BillEditor.razor) | UI-6.5 |

@@ -76,7 +76,7 @@ The thread: **green tests prove only what they assert, so an AI's green build is
 
 1. **What the agent has to work with.** Tour the solution and its test kinds; run the unit tests (instant). Fast tests are
    the feedback loop an agent can run for itself.
-2. **Green tests, wrong code.** Seed a rounding bug, say that you seeded it, and watch all 71 tests pass (script below).
+2. **Green tests, wrong code.** Seed a rounding bug, say that you seeded it, and watch all 81 tests pass (script below).
 3. **Why the agent got it right.** Show the [agent evals](#agent-evals): ten agents out of ten kept the engine correct,
    including five that never saw the written rule. They read "show" as a display change. That is good judgment, but
    judgment isn't a guarantee: nothing would have failed if they had changed the engine. Then turn a written rule into
@@ -123,7 +123,7 @@ script; no agent wrote it (see [Agent evals](#agent-evals)), so say so on stage.
 the capabilities docs because the tests below stay out of the suite so the demo works.
 
 1. Run `./scripts/demo-rounding-bug.ps1`, then `git diff`. Each modifier now rounds as it is applied.
-2. Run `dotnet test --filter "Category=Unit"` (42 tests) or `dotnet test` with Docker running (71 tests). All of them pass.
+2. Run `dotnet test --filter "Category=Unit"` (42 tests) or `dotnet test` with Docker running (81 tests). All of them pass.
 3. Add this test to `RepricingEngineTests.cs`. It comes from requirement PROC-2.4, not from the code:
    ```csharp
    [Fact]

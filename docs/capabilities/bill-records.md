@@ -54,13 +54,13 @@ Evidence: [BillsController.cs](../../src/Billing.Api/Controllers/BillsController
 - **BILL-5.3** If the bill has no lines, then the Billing API shall reject the bill.
 - **BILL-5.4** If a line number is less than 1, then the Billing API shall reject the bill. (untested)
 - **BILL-5.5** If two lines share a line number, then the Billing API shall reject the bill and name the repeated number.
-- **BILL-5.6** If a procedure code is not exactly 5 characters long, then the Billing API shall reject the bill. (untested)
+- **BILL-5.6** If a procedure code is not exactly 5 ASCII letters or digits, in either case, then the Billing API shall reject the bill and say that the code must be exactly 5 letters or digits.
 - **BILL-5.7** If a line's units are outside 1 to 999, then the Billing API shall reject the bill.
 - **BILL-5.8** If a line's billed amount is outside 0 to 9,999,999.99, then the Billing API shall reject the bill. (untested)
 - **BILL-5.9** If a line has a modifier other than 50 or 26, then the Billing API shall reject the bill and name the line and modifier.
 - **BILL-5.10** If a line lists the same modifier more than once, then the Billing API shall reject the bill and name the line.
 
-Evidence: [BillRequest.cs](../../src/Billing.Contracts/BillRequest.cs), [LineItemRequest.cs](../../src/Billing.Contracts/LineItemRequest.cs). Tests: `Create_returns_400_problem_details_when_the_bill_has_no_lines`, `Create_returns_400_when_a_line_has_an_unknown_modifier`, `Create_returns_400_when_a_line_repeats_a_modifier`, `Create_returns_400_when_line_numbers_are_duplicated`, `Create_returns_400_instead_of_overflowing_the_database_when_the_units_are_too_large`. These tests check the status codes through the create endpoint only, not the message text and not the replace endpoint.
+Evidence: [BillRequest.cs](../../src/Billing.Contracts/BillRequest.cs), [LineItemRequest.cs](../../src/Billing.Contracts/LineItemRequest.cs). Tests: `Create_returns_400_problem_details_when_the_bill_has_no_lines`, `Create_returns_400_when_a_line_has_an_unknown_modifier`, `Create_returns_400_when_a_line_repeats_a_modifier`, `Create_returns_400_when_line_numbers_are_duplicated`, `Create_returns_400_instead_of_overflowing_the_database_when_the_units_are_too_large`, `Create_returns_400_naming_the_code_rule_when_the_procedure_code_is_not_5_letters_or_digits`, `Create_returns_201_when_the_procedure_code_is_5_letters_or_digits`, `Update_returns_400_when_the_procedure_code_has_a_character_other_than_a_letter_or_digit`. Apart from the BILL-5.6 tests, which also check the message and the replace endpoint, these tests check only the create endpoint's status code.
 
 ## BILL-6 Normalize procedure codes
 
