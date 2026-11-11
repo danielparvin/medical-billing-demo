@@ -1,6 +1,20 @@
 <Solution>
   <Folder Name="/Solution Items/">
+    <File Path="global.json" />
     <File Path="README.md" />
+  </Folder>
+  <Folder Name="/Solution Items/.github/" />
+  <Folder Name="/Solution Items/.github/workflows/">
+    <File Path=".github/workflows/ci.yml" />
+  </Folder>
+  <Folder Name="/Solution Items/docs/" />
+  <Folder Name="/Solution Items/docs/capabilities/">
+    <File Path="docs/capabilities/application-runtime.md" />
+    <File Path="docs/capabilities/bill-processing.md" />
+    <File Path="docs/capabilities/bill-records.md" />
+    <File Path="docs/capabilities/bill-workspace.md" />
+    <File Path="docs/capabilities/fee-schedule.md" />
+    <File Path="docs/capabilities/README.md" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Billing.Api/Billing.Api.csproj" />

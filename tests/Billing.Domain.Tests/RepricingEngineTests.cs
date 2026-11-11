@@ -41,6 +41,7 @@ public class RepricingEngineTests
     [Fact]
     public void Reprice_combines_the_multipliers_when_the_line_has_both_the_bilateral_and_professional_component_modifiers()
     {
+        // 100.00 x 1.50 (modifier 50) x 0.40 (modifier 26) = 60.00; the factors multiply rather than add.
         var bill = new BillBuilder().WithLine(1, "A1001", 500m, 1, "50", "26").Build();
 
         var result = RepricingEngine.Reprice(bill, BillBuilder.Fees(("A1001", 100.00m)));
