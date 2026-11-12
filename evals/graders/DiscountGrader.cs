@@ -1,6 +1,6 @@
 // Hidden grader for the "discount" eval. grade-evals.ps1 copies it into an eval copy's tests/Billing.Domain.Tests,
 // runs it, and removes it; it is not part of any project in this repo.
-// All six checks pass on tag cp-5-mpd-complete; the first, second, fourth and sixth fail on the engine without the discount.
+// All six checks pass on commit 58955b6; the first, second, fourth and sixth fail on the engine without the discount.
 using Billing.Domain.Pricing;
 
 namespace Billing.Domain.Tests;

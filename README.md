@@ -62,15 +62,6 @@ Tests: `Domain.Tests` (unit, property-based with CsCheck, and architecture with 
 Aspire runs the app; it does not change the tests. The integration tests still start their own throwaway SQL Server
 with Testcontainers, so they stay independent of the AppHost and of any data in the persistent dev container.
 
-## Checkpoints
-| Tag | State |
-|---|---|
-| `cp-1-scaffold` | Empty solution building green |
-| `cp-2-engine-no-mpd` | Engine without the multiple-procedure discount, with unit tests |
-| `cp-3-data-api` | Data layer, API, container-backed tests |
-| `cp-4-ui` | Full app, **discount not yet implemented** |
-| `cp-5-mpd-complete` | Discount tests + implementation |
-
 ## Talk arc
 The thread: **green tests prove only what they assert, so an AI's green build is where review starts, not where it ends.**
 
@@ -97,8 +88,8 @@ The thread: **green tests prove only what they assert, so an AI's green build is
    page: one trace spans the button click in `web` and the request in `api`.
 
 ## Live-coding script (multiple-procedure discount)
-Start on `main`, which has no discount. The tag `cp-5-mpd-complete` has a finished version to refer to, though its
-tests use the older naming.
+Start on `main`, which has no discount. Commit `58955b6` has a finished version to refer to, though its tests use
+the older naming.
 
 The discount contradicts one test on `main`, so before you start, remove
 `Reprice_pays_every_line_in_full_and_sums_the_total_allowed_when_a_bill_has_several_priced_lines` from
@@ -115,7 +106,7 @@ Write the tests in `tests/Billing.Domain.Tests/MultipleProcedureDiscountTests.cs
 6. half-cent after discount rounds up
 7. discounted amount is still capped at billed charges
 8. same result when the lines arrive in a different order (`RepricingEnginePropertyTests` already checks this on generated
-   bills, and it also passed against the finished discount at `cp-5-mpd-complete`; compare it with the example you write)
+   bills, and it also passed against the finished discount at commit `58955b6`; compare it with the example you write)
 
 ## Demo script: green tests, wrong code
 Start from a clean working tree, because the reset discards all uncommitted changes to the engine. The bug is seeded by a
@@ -207,7 +198,7 @@ tags and no live-coding script, so the agents had no hint about the contradictin
   deleted it or stopped to ask; all five named the change in their final report.
 - All five implementations passed six independent discount checks: full and half pay, ranking after modifiers, the
   tie-break, unpriced lines, rounding once after the discount, and the cap after it. Four of the six checks fail on the
-  engine without the discount, and all six pass on `cp-5-mpd-complete`.
+  engine without the discount, and all six pass on commit `58955b6`.
 - All five added their own tests, a new audit step and new requirements in the capabilities docs, and none ran the
   integration tests.
 
