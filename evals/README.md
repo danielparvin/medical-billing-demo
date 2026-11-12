@@ -11,8 +11,8 @@ agents never see. The results so far, and what they mean for the talk, are in th
 | `discount` | [discount.md](prompts/discount.md) | As committed, minus talk material | [DiscountGrader.cs](graders/DiscountGrader.cs) |
 
 Every copy is a snapshot of commit `f52c5b8`, which predates the talk demos, with no git history, no tags, and no
-checkpoints, talk arc or live-coding script in its README. Without that, an agent could find the finished discount at
-tag `cp-5-mpd-complete`, or read that the discount contradicts a test.
+checkpoints, talk arc or live-coding script in its README. Without that, an agent could find the finished discount in
+the history at commit `58955b6`, or read that the discount contradicts a test.
 
 ## Run an eval
 1. Make the copies (five per eval by default; `-Eval` and `-Runs` narrow it):
@@ -34,7 +34,7 @@ integration tests are not run.
 ## What the graders were checked against
 On untouched copies, `RoundOnceGrader` passes and `DiscountGrader` passes 2 of 6 (the unpriced-line and cap checks also
 hold without a discount). With the rounding bug from `scripts/demo-rounding-bug.ps1`, `RoundOnceGrader` fails. With the
-engine from tag `cp-5-mpd-complete`, `DiscountGrader` passes 6 of 6.
+engine from commit `58955b6`, `DiscountGrader` passes 6 of 6.
 
 ## Limits
 - Five runs per eval are anecdotes, not rates. Agents and models change, so rerun the evals before quoting them.
