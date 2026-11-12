@@ -16,6 +16,11 @@
     <File Path="docs/capabilities/fee-schedule.md" />
     <File Path="docs/capabilities/README.md" />
   </Folder>
+  <Folder Name="/Solution Items/scripts/">
+    <File Path="scripts/demo-rounding-bug.ps1" />
+    <File Path="scripts/pull-images.ps1" />
+    <File Path="scripts/run-demo.ps1" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/Billing.Api/Billing.Api.csproj" />
     <Project Path="src/Billing.AppHost/Billing.AppHost.csproj" />
